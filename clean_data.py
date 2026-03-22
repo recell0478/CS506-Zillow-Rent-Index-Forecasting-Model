@@ -62,6 +62,16 @@ zhvi_long = zhvi.melt(
 # -------------------------------
 zhvi_long["date"] = pd.to_datetime(zhvi_long["date"], format="%Y-%m-%d")
 
+# save U.S. stat
+us_zhvi = zhvi_long[zhvi_long["regionname"] == "United States"].copy()
+
+# label it like a division
+us_zhvi["division"] = "United States"
+
+# keep only needed columns
+us_zhvi = us_zhvi[["division", "date", "zhvi"]]
+
+
 # keep only metro areas (better consistency)
 zhvi_long = zhvi_long[zhvi_long["regiontype"] == "msa"]
 
@@ -89,11 +99,18 @@ zhvi_long = zhvi_long.dropna(subset=["division"])
 # -------------------------------
 zhvi_division = zhvi_long.groupby(["division", "date"])["zhvi"].mean().reset_index()
 
+# add back U.S. stat
+final_zhvi = pd.concat([zhvi_division, us_zhvi], ignore_index=True)
+
+# sort nicely
+final_zhvi = final_zhvi.sort_values(by=["division", "date"])
+
+
 # -------------------------------
 # 7. Final output
 # -------------------------------
-print(zhvi_division.head())
-print(zhvi_division.shape)
+print(final_zhvi.head())
+print(final_zhvi.shape)
 
 
 
