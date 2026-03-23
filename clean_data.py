@@ -1,5 +1,4 @@
 import pandas as pd
-import os
 
 # -------------------------------
 # 1. State → Census Division map
@@ -79,28 +78,19 @@ final_hpi = hpi_long[['date', 'division', 'hpi']].dropna()
 # ---------------------------------------------------------
 # 4. UPI: Load and Map to Divisions 
 # ---------------------------------------------------------
-print("Processing UPI (Unemployment)...")
-upi = pd.read_excel("data/upi.xlsx", skiprows=2)
-upi.columns = [c.strip() for c in upi.columns] # Clean column headers
+print("Processing UPI (Historical BLS Series)...")
+# Skiprows=11 targets the 'Year, Jan, Feb...' header in the new file
+upi_wide = pd.read_excel('data/upi.xlsx', skiprows=11)
 
-# Extract State from "County Name/State Abbreviation" 
-upi['state'] = upi['County Name/State Abbreviation'].str.split(',').str[-1].str.strip()
-upi['division'] = upi['state'].map(state_to_division)
+# Melt Jan-Dec columns into a single long column
+upi_long = upi_wide.melt(id_vars=['Year'], var_name='Month', value_name='unemployment_rate')
 
-# Remove 'p' from preliminary data strings like "Dec-24 p"
-upi['date_str'] = upi['Period'].str.replace(' p', '')
-upi['date'] = pd.to_datetime(upi['date_str'], format='%b-%y')
+# Create a proper date column
+upi_long['date_str'] = upi_long['Year'].astype(str) + "-" + upi_long['Month']
+upi_long['date'] = pd.to_datetime(upi_long['date_str'], format='%Y-%b')
 
-# Clean unemployment rate column (remove hyphens/errors)
-upi_rate_col = 'Unemployment Rate (%)' # If hyphenated in file: 'Unemploy-ment Rate (%)'
-if upi_rate_col not in upi.columns:
-    upi_rate_col = [c for c in upi.columns if 'Unemploy' in c][0]
-
-upi[upi_rate_col] = pd.to_numeric(upi[upi_rate_col], errors='coerce')
-
-# Aggregate by Division and Date
-final_upi = upi.groupby(['division', 'date'])[upi_rate_col].mean().reset_index()
-final_upi.rename(columns={upi_rate_col: 'unemployment_rate'}, inplace=True)
+# Final UPI cleaning
+final_upi = upi_long[['date', 'unemployment_rate']].dropna().sort_values('date')
 
 # ---------------------------------------------------------
 # 5. MERGE: Create the Final Master Dataset
@@ -109,7 +99,7 @@ print("Merging all features...")
 # Join ZHVI and HPI
 master_df = pd.merge(final_zhvi, final_hpi, on=['date', 'division'], how='inner')
 # Join with Unemployment
-master_df = pd.merge(master_df, final_upi, on=['date', 'division'], how='left')
+master_df = pd.merge(master_df, final_upi, on=['date'], how='left')
 
 master_df = master_df.sort_values(by=['division', 'date'])
 master_df.to_csv("data/processed/df_clean.csv", index=False)
