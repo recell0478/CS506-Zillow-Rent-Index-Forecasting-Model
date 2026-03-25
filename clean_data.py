@@ -3,50 +3,39 @@ import pandas as pd
 # -------------------------------
 # 1. State → Census Division map
 # -------------------------------
+
 state_to_division = {
     "CT": "New England", "ME": "New England", "MA": "New England",
     "NH": "New England", "RI": "New England", "VT": "New England",
-
     "NJ": "Middle Atlantic", "NY": "Middle Atlantic", "PA": "Middle Atlantic",
-
     "IL": "East North Central", "IN": "East North Central", "MI": "East North Central",
     "OH": "East North Central", "WI": "East North Central",
-
     "IA": "West North Central", "KS": "West North Central", "MN": "West North Central",
     "MO": "West North Central", "NE": "West North Central",
     "ND": "West North Central", "SD": "West North Central",
-
     "DE": "South Atlantic", "FL": "South Atlantic", "GA": "South Atlantic",
     "MD": "South Atlantic", "NC": "South Atlantic", "SC": "South Atlantic",
     "VA": "South Atlantic", "DC": "South Atlantic", "WV": "South Atlantic",
-
     "AL": "East South Central", "KY": "East South Central",
     "MS": "East South Central", "TN": "East South Central",
-
     "AR": "West South Central", "LA": "West South Central",
     "OK": "West South Central", "TX": "West South Central",
-
     "AZ": "Mountain", "CO": "Mountain", "ID": "Mountain",
     "MT": "Mountain", "NV": "Mountain", "NM": "Mountain",
     "UT": "Mountain", "WY": "Mountain",
-
     "AK": "Pacific", "CA": "Pacific", "HI": "Pacific",
     "OR": "Pacific", "WA": "Pacific"
 }
 
-# -------------------------------
-# 2. Load + clean ZHVI
-# -------------------------------
+# ---------------------------------------------------------
+# 2. ZHVI: Load and Normalize Date (Zillow)
+# ---------------------------------------------------------
+print("Processing ZHVI (Zillow)...")
+
 zhvi = pd.read_csv("data/zhvi.csv")
-
-zhvi = zhvi.loc[:, ~zhvi.columns.str.contains('^Unnamed')]
-zhvi = zhvi.dropna(how='all')
-
 zhvi.columns = zhvi.columns.str.strip().str.lower().str.replace(" ", "_")
 
-# -------------------------------
-# 3. Reshape (wide → long)
-# -------------------------------
+# Reshape (wide → long)
 date_cols = [col for col in zhvi.columns if col[:4].isdigit()]
 id_cols = [col for col in zhvi.columns if col not in date_cols]
 
@@ -57,92 +46,64 @@ zhvi_long = zhvi.melt(
     value_name="zhvi"
 )
 
-# -------------------------------
-# 4. Clean + format
-# -------------------------------
-zhvi_long["date"] = pd.to_datetime(zhvi_long["date"], format="%Y-%m-%d")
+# Standardize date to 1st of the month
+zhvi_long["date"] = pd.to_datetime(zhvi_long["date"]).dt.to_period('M').dt.to_timestamp()
 
-# save U.S. stat
+# National USA stats
 us_zhvi = zhvi_long[zhvi_long["regionname"] == "United States"].copy()
-
-# label it like a division
-us_zhvi["division"] = "United States"
-
-# keep only needed columns
+us_zhvi["division"] = "USA"
 us_zhvi = us_zhvi[["division", "date", "zhvi"]]
 
-
-# keep only metro areas (better consistency)
-zhvi_long = zhvi_long[zhvi_long["regiontype"] == "msa"]
-
-# drop bad rows
-zhvi_long = zhvi_long.dropna(subset=["statename"])
-
-# sort before interpolation
-zhvi_long = zhvi_long.sort_values(by=["regionname", "date"])
-
-# interpolate missing values
-zhvi_long["zhvi"] = zhvi_long.groupby("regionname")["zhvi"].transform(
-    lambda x: x.interpolate()
-)
-
-# -------------------------------
-# 5. Map to Census divisions
-# -------------------------------
+# Division stats
+zhvi_long = zhvi_long[zhvi_long["regiontype"] == "msa"].dropna(subset=["statename"])
 zhvi_long["division"] = zhvi_long["statename"].map(state_to_division)
-
-# drop anything unmapped (safety)
-zhvi_long = zhvi_long.dropna(subset=["division"])
-
-# -------------------------------
-# 6. Aggregate → division level
-# -------------------------------
 zhvi_division = zhvi_long.groupby(["division", "date"])["zhvi"].mean().reset_index()
 
-# add back U.S. stat
 final_zhvi = pd.concat([zhvi_division, us_zhvi], ignore_index=True)
 
-# sort nicely
-final_zhvi = final_zhvi.sort_values(by=["division", "date"])
+# ---------------------------------------------------------
+# 3. HPI: Load and Normalize Date
+# ---------------------------------------------------------
+print("Processing HPI (FHFA)...")
+hpi = pd.read_excel("data/hpi.xlsx", skiprows=3)
+hpi.rename(columns={'Month': 'date'}, inplace=True)
+hpi['date'] = pd.to_datetime(hpi['date']).dt.to_period('M').dt.to_timestamp()
 
+hpi_long = hpi.melt(id_vars=['date'], var_name='division_raw', value_name='hpi')
+hpi_long['division'] = hpi_long['division_raw'].str.split('\n').str[0].str.strip()
+hpi_long.loc[hpi_long['division'].str.contains('USA', na=False), 'division'] = 'USA'
 
-# -------------------------------
-# 7. Final output
-# -------------------------------
-print(final_zhvi.head())
-print(final_zhvi.shape)
+final_hpi = hpi_long[['date', 'division', 'hpi']].dropna()
 
+# ---------------------------------------------------------
+# 4. UPI: Load and Map to Divisions 
+# ---------------------------------------------------------
+print("Processing UPI (Historical BLS Series)...")
+# Skiprows=11 targets the 'Year, Jan, Feb...' header in the new file
+upi_wide = pd.read_excel('data/upi.xlsx', skiprows=11)
 
+# Melt Jan-Dec columns into a single long column
+upi_long = upi_wide.melt(id_vars=['Year'], var_name='Month', value_name='unemployment_rate')
 
-# cleaning hpi file
-hpi = pd.read_excel("data/hpi.xlsx", skiprows=1)
-# understand the structure
-hpi = hpi.loc[:, ~hpi.columns.str.contains('^Unnamed')]
-hpi = hpi.dropna(how='all')  # drop completely empty rows
-# remove columns
-hpi.columns = hpi.columns.str.strip().str.lower().str.replace(" ", "_")
-# convert data types
+# Create a proper date column
+upi_long['date_str'] = upi_long['Year'].astype(str) + "-" + upi_long['Month']
+upi_long['date'] = pd.to_datetime(upi_long['date_str'], format='%Y-%b')
 
-# HPI specific
+# Final UPI cleaning
+final_upi = upi_long[['date', 'unemployment_rate']].dropna().sort_values('date')
 
+# ---------------------------------------------------------
+# 5. MERGE: Create the Final Master Dataset
+# ---------------------------------------------------------
+print("Merging all features...")
+# Join ZHVI and HPI
+master_df = pd.merge(final_zhvi, final_hpi, on=['date', 'division'], how='inner')
+# Join with Unemployment
+master_df = pd.merge(master_df, final_upi, on=['date'], how='left')
 
+master_df = master_df.sort_values(by=['division', 'date'])
+master_df.to_csv("data/processed/df_clean.csv", index=False)
 
-
-print(hpi.head())
-print(hpi.columns)
-
-
-
-
-
-# # # cleaning upi file
-# # upi = pd.read_excel("data/upi.xlsx", skiprows=2)
-# # print(upi.head(20))
-# # # understand the structure
-# # upi = upi.loc[:, ~upi.columns.str.contains('^Unnamed')]
-# # upi = upi.dropna(how='all')  # drop completely empty rows
-# # # remove columns
-# # upi.columns = upi.columns.str.strip().str.lower().str.replace(" ", "_")
-
-# # # print(upi.head())
-# # # print(upi.columns)
+print(f"Success! Final Dataset with columns: {master_df.columns.tolist()}")
+print(f"Final shape: {master_df.shape}")
+print(master_df.head())
