@@ -9,6 +9,6 @@
 
 **Modeling**: Use XGBoost regression with lag + rolling-window features from the home index time series to predict the next month’s home index value. We are not computing or reverse-engineering the index(ZORI) formula. We will treat the published home index series as the target label and build a model that forecasts future, unobserved months/quarters. The index may have a methodology, but future values are not computable today because they depend on future market conditions and data.
 
-**Visualization**: 
+**Visualization**: Scatter Plot with a fitted regression showing the correlation of between Home Price Index (HPI) and Zillow Home Value Index (ZHVI). The points  mapped are based on same date, division, and unemployment rate. The graph shows a positive association between HPI and ZHVI, as higher HPI values tend to correlate with ZHVI ( regression line supports this overall trend). Suggesting that HPI may be useful in terms for future use in predictions.
 
 **Test plan**: Use time-based split and report MAE/RMSE
