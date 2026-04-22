@@ -1,0 +1,163 @@
+year,division,total_households
+2006,East North Central,17758209.0
+2006,East South Central,6898613.0
+2006,Middle Atlantic,15069469.0
+2006,Mountain,7676916.0
+2006,New England,5484113.0
+2006,Pacific,16735311.0
+2006,South Atlantic,21901583.0
+2006,West North Central,7930094.0
+2006,West South Central,12163094.0
+2007,East North Central,17818456.0
+2007,East South Central,6959884.0
+2007,Middle Atlantic,15123332.0
+2007,Mountain,7774402.0
+2007,New England,5470422.0
+2007,Pacific,16850252.0
+2007,South Atlantic,22077571.0
+2007,West North Central,7959859.0
+2007,West South Central,12343799.0
+2008,East North Central,17816124.0
+2008,East South Central,7031033.0
+2008,Middle Atlantic,15196048.0
+2008,Mountain,7870391.0
+2008,New England,5493370.0
+2008,Pacific,16873890.0
+2008,South Atlantic,22206616.0
+2008,West North Central,8044481.0
+2008,West South Central,12569376.0
+2009,East North Central,17853414.0
+2009,East South Central,7084340.0
+2009,Middle Atlantic,15259350.0
+2009,Mountain,7905276.0
+2009,New England,5511097.0
+2009,Pacific,16942831.0
+2009,South Atlantic,22224884.0
+2009,West North Central,8064106.0
+2009,West South Central,12770931.0
+2010,East North Central,17834981.0
+2010,East South Central,7020162.0
+2010,Middle Atlantic,15304878.0
+2010,Mountain,8131913.0
+2010,New England,5599293.0
+2010,Pacific,17220897.0
+2010,South Atlantic,22393004.0
+2010,West North Central,8085944.0
+2010,West South Central,12976347.0
+2011,East North Central,17790659.0
+2011,East South Central,7065099.0
+2011,Middle Atlantic,15292900.0
+2011,Mountain,8172315.0
+2011,New England,5621832.0
+2011,Pacific,17324236.0
+2011,South Atlantic,22515460.0
+2011,West North Central,8086472.0
+2011,West South Central,13122752.0
+2012,East North Central,17912373.0
+2012,East South Central,7122784.0
+2012,Middle Atlantic,15395970.0
+2012,Mountain,8271105.0
+2012,New England,5625489.0
+2012,Pacific,17405831.0
+2012,South Atlantic,22794714.0
+2012,West North Central,8160316.0
+2012,West South Central,13280958.0
+2013,East North Central,17968451.0
+2013,East South Central,7109313.0
+2013,Middle Atlantic,15334389.0
+2013,Mountain,8277942.0
+2013,New England,5602713.0
+2013,Pacific,17515083.0
+2013,South Atlantic,22877936.0
+2013,West North Central,8193028.0
+2013,West South Central,13412178.0
+2014,East North Central,18010591.0
+2014,East South Central,7158799.0
+2014,Middle Atlantic,15423214.0
+2014,Mountain,8404283.0
+2014,New England,5641633.0
+2014,Pacific,17674188.0
+2014,South Atlantic,23144855.0
+2014,West North Central,8215426.0
+2014,West South Central,13586438.0
+2015,East North Central,18094391.0
+2015,East South Central,7197189.0
+2015,Middle Atlantic,15377694.0
+2015,Mountain,8513747.0
+2015,New England,5628844.0
+2015,Pacific,17874256.0
+2015,South Atlantic,23474851.0
+2015,West North Central,8277344.0
+2015,West South Central,13769934.0
+2016,East North Central,18191136.0
+2016,East South Central,7217801.0
+2016,Middle Atlantic,15341344.0
+2016,Mountain,8635329.0
+2016,New England,5652060.0
+2016,Pacific,17988268.0
+2016,South Atlantic,23689701.0
+2016,West North Central,8275953.0
+2016,West South Central,13868473.0
+2017,East North Central,18313473.0
+2017,East South Central,7247334.0
+2017,Middle Atlantic,15531881.0
+2017,Mountain,8803967.0
+2017,New England,5696752.0
+2017,Pacific,18157928.0
+2017,South Atlantic,23978150.0
+2017,West North Central,8348890.0
+2017,West South Central,13984443.0
+2018,East North Central,18478906.0
+2018,East South Central,7299667.0
+2018,Middle Atlantic,15687513.0
+2018,Mountain,9015792.0
+2018,New England,5771850.0
+2018,Pacific,18317527.0
+2018,South Atlantic,24333132.0
+2018,West North Central,8460833.0
+2018,West South Central,14154960.0
+2019,East North Central,18550614.0
+2019,East South Central,7401274.0
+2019,Middle Atlantic,15852325.0
+2019,Mountain,9193014.0
+2019,New England,5812801.0
+2019,Pacific,18457200.0
+2019,South Atlantic,24595407.0
+2019,West North Central,8555217.0
+2019,West South Central,14385000.0
+2021,East North Central,19007025.0
+2021,East South Central,7653247.0
+2021,Middle Atlantic,16379567.0
+2021,Mountain,9643245.0
+2021,New England,6039316.0
+2021,Pacific,18915308.0
+2021,South Atlantic,25920577.0
+2021,West North Central,8674632.0
+2021,West South Central,15311813.0
+2022,East North Central,19241970.0
+2022,East South Central,7840152.0
+2022,Middle Atlantic,16585351.0
+2022,Mountain,9835739.0
+2022,New England,6117747.0
+2022,Pacific,19126280.0
+2022,South Atlantic,26576443.0
+2022,West North Central,8853249.0
+2022,West South Central,15693997.0
+2023,East North Central,19346826.0
+2023,East South Central,7960991.0
+2023,Middle Atlantic,16671933.0
+2023,Mountain,10037610.0
+2023,New England,6153123.0
+2023,Pacific,19323881.0
+2023,South Atlantic,26964692.0
+2023,West North Central,8956768.0
+2023,West South Central,15916536.0
+2024,East North Central,19476886.0
+2024,East South Central,8030439.0
+2024,Middle Atlantic,16733742.0
+2024,Mountain,10219141.0
+2024,New England,6204829.0
+2024,Pacific,19477184.0
+2024,South Atlantic,27415188.0
+2024,West North Central,9030501.0
+2024,West South Central,16149236.0
