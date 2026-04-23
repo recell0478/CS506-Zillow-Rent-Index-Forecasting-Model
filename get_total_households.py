@@ -3,10 +3,10 @@ import requests
 
 OUTPUT_FILE = "total_households.csv"
 
-# Use only years where this profile variable is consistent and standard ACS 1-year exists
-YEARS = list(range(2006, 2020)) + list(range(2021, 2025))
+# ACS 5-year years
+YEARS = list(range(2010, 2025))
 
-# ACS 1-year profile variable:
+# ACS 5-year profile variable:
 # DP02_0001E = Estimate!!HOUSEHOLDS BY TYPE!!Total households
 VARIABLE = "DP02_0001E"
 
@@ -44,7 +44,7 @@ STATE_TO_DIVISION = {
 }
 
 def fetch_state_households(year: int) -> pd.DataFrame:
-    url = f"https://api.census.gov/data/{year}/acs/acs1/profile"
+    url = f"https://api.census.gov/data/{year}/acs/acs5/profile"
     params = {
         "get": f"NAME,{VARIABLE}",
         "for": "state:*",
@@ -72,7 +72,7 @@ def main() -> None:
 
     all_states = pd.concat(yearly_frames, ignore_index=True)
     all_states["division"] = all_states["state"].map(STATE_TO_DIVISION)
-    all_states = all_states.dropna(subset=["division"])
+    all_states = all_states.dropna(subset=["division", "total_households"])
 
     division_df = (
         all_states.groupby(["year", "division"], as_index=False)["total_households"]
@@ -87,6 +87,8 @@ def main() -> None:
     print(f"Saved to {OUTPUT_FILE}")
     print("\nPreview:")
     print(division_df.head(12))
+    print("\nTail:")
+    print(division_df.tail(12))
 
 if __name__ == "__main__":
     main()

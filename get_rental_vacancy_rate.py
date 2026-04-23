@@ -3,16 +3,14 @@ import requests
 
 OUTPUT_FILE = "rental_vacancy_rate.csv"
 
-# Standard ACS 1-year years.
-# 2020 is excluded because standard ACS 1-year estimates were replaced
-# by experimental products.
-YEARS = list(range(2005, 2020)) + list(range(2021, 2025))
+# ACS 5-year years
+YEARS = list(range(2010, 2025))
 
-# ACS 1-year profile variables
+# ACS 5-year profile variables
 # DP04_0005E = Rental vacancy rate
-# DP04_0006E = Total housing units
+# DP04_0001E = Total housing units
 VACANCY_VAR = "DP04_0005E"
-HOUSING_UNITS_VAR = "DP04_0006E"
+HOUSING_UNITS_VAR = "DP04_0001E"
 
 STATE_TO_DIVISION = {
     # New England
@@ -87,13 +85,13 @@ STATE_TO_DIVISION = {
 
 def fetch_state_rental_vacancy(year: int) -> pd.DataFrame:
     """
-    Fetch state-level ACS 1-year rental vacancy rate and total housing units
+    Fetch state-level ACS 5-year rental vacancy rate and total housing units
     for one year.
 
     Returns:
         year, state, NAME, rental_vacancy_rate, total_housing_units
     """
-    url = f"https://api.census.gov/data/{year}/acs/acs1/profile"
+    url = f"https://api.census.gov/data/{year}/acs/acs5/profile"
     params = {
         "get": f"NAME,{VACANCY_VAR},{HOUSING_UNITS_VAR}",
         "for": "state:*",
@@ -124,10 +122,11 @@ def main() -> None:
 
     # Map states to Census divisions
     all_states["division"] = all_states["state"].map(STATE_TO_DIVISION)
-    all_states = all_states.dropna(subset=["division", "rental_vacancy_rate", "total_housing_units"])
+    all_states = all_states.dropna(
+        subset=["division", "rental_vacancy_rate", "total_housing_units"]
+    )
 
     # Weighted average rental vacancy rate by division-year
-    # weight = total housing units
     all_states["weighted_rate"] = (
         all_states["rental_vacancy_rate"] * all_states["total_housing_units"]
     )

@@ -5,7 +5,7 @@ import requests
 SOURCE_URL = "https://www.census.gov/construction/bps/xls/annualhistorybystate.xls"
 OUTPUT_FILE = "construction_permits.csv"
 
-START_YEAR = 2000
+START_YEAR = 2010
 END_YEAR = 2024
 
 # Map worksheet abbreviation directly to Census division
