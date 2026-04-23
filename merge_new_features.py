@@ -5,8 +5,13 @@ import re
 
 
 BASE_DATA_PATH = "data/processed/df_clean.csv"
-ACS_ZIP_PATH = "productDownload_2026-04-18T140321.zip"
-OUTPUT_PATH = "data/processed/df_clean_with_acs_model_ready_2010plus.csv"
+ACS_ZIP_PATH = "data/income_pop_edu.zip"
+
+TOTAL_HOUSEHOLDS_PATH = "data/total_households.csv"
+CONSTRUCTION_PERMITS_PATH = "data/construction_permits.csv"
+RENTAL_VACANCY_PATH = "data/rental_vacancy_rate.csv"
+
+OUTPUT_PATH = "data/processed/df_clean_with_all_features_model_ready_2010_2024.csv"
 
 
 STATE_TO_DIVISION = {
@@ -88,8 +93,15 @@ def build_acs_features_from_zip(zip_path: str) -> pd.DataFrame:
       - total_population
       - median_income
       - bachelors_pct
+    Handles the ACS naming change starting in 2016, where columns become zero-padded.
     """
     yearly_frames = []
+
+    def pick_col(df: pd.DataFrame, *candidates: str) -> str:
+        for c in candidates:
+            if c in df.columns:
+                return c
+        raise KeyError(f"None of these columns were found: {candidates}")
 
     with zipfile.ZipFile(zip_path, "r") as zf:
         data_files = sorted(
@@ -100,6 +112,7 @@ def build_acs_features_from_zip(zip_path: str) -> pd.DataFrame:
             year_match = re.search(r"ACSSPP1Y(\d{4})\.S0201-Data\.csv", file_name)
             if not year_match:
                 continue
+
             year = int(year_match.group(1))
 
             with zf.open(file_name) as f:
@@ -108,52 +121,47 @@ def build_acs_features_from_zip(zip_path: str) -> pd.DataFrame:
             if "GEO_ID" in df.columns:
                 df = df[df["GEO_ID"] != "Geography"].copy()
 
-            # Keep only required columns
-            needed_cols = [
-                "GEO_ID",
-                "NAME",
-                "S0201_006E",   # total population
-                "S0201_099E",   # bachelor's degree or higher (%)
-                "S0201_214E",   # median household income
-            ]
+            # 2010-2015 use old names like S0201_006E
+            # 2016+ use zero-padded names like S0201_0006E
+            pop_col = pick_col(df, "S0201_006E", "S0201_0006E")
+            bach_col = pick_col(df, "S0201_099E", "S0201_0099E")
+            income_col = pick_col(df, "S0201_214E", "S0201_0214E")
+
+            needed_cols = ["GEO_ID", "NAME", pop_col, bach_col, income_col]
             df = df[needed_cols].copy()
 
             # Convert numeric columns
-            df["S0201_006E"] = to_numeric(df["S0201_006E"])
-            df["S0201_099E"] = to_numeric(df["S0201_099E"])
-            df["S0201_214E"] = to_numeric(df["S0201_214E"])
+            df[pop_col] = to_numeric(df[pop_col])
+            df[bach_col] = to_numeric(df[bach_col])
+            df[income_col] = to_numeric(df[income_col])
 
             # Extract state and map to division
             df["state_abbr"] = df["NAME"].apply(extract_state_abbr)
             df["division"] = df["state_abbr"].map(STATE_TO_DIVISION)
 
             # Keep only rows with valid division and non-missing core values
-            df = df.dropna(subset=["division", "S0201_006E"]).copy()
+            df = df.dropna(subset=["division", pop_col]).copy()
 
             # Rename into project-friendly names
             df = df.rename(columns={
-                "S0201_006E": "total_population_county",
-                "S0201_099E": "bachelors_pct_county",
-                "S0201_214E": "median_income_county",
+                pop_col: "total_population_county",
+                bach_col: "bachelors_pct_county",
+                income_col: "median_income_county",
             })
 
             df["year"] = year
 
-            # Aggregate county -> division
-            # total_population = sum
-            # median_income = population-weighted average
-            # bachelors_pct = population-weighted average
             grouped = (
                 df.groupby(["division", "year"], as_index=False)
                   .apply(
                       lambda g: pd.Series({
                           "total_population": g["total_population_county"].sum(),
                           "median_income": np.average(
-                              g["median_income_county"].dropna(),
+                              g.loc[g["median_income_county"].notna(), "median_income_county"],
                               weights=g.loc[g["median_income_county"].notna(), "total_population_county"]
                           ) if g["median_income_county"].notna().any() else np.nan,
                           "bachelors_pct": np.average(
-                              g["bachelors_pct_county"].dropna(),
+                              g.loc[g["bachelors_pct_county"].notna(), "bachelors_pct_county"],
                               weights=g.loc[g["bachelors_pct_county"].notna(), "total_population_county"]
                           ) if g["bachelors_pct_county"].notna().any() else np.nan,
                       })
@@ -167,32 +175,79 @@ def build_acs_features_from_zip(zip_path: str) -> pd.DataFrame:
     acs_features = acs_features.sort_values(["division", "year"]).reset_index(drop=True)
     return acs_features
 
+
+def load_feature_csv(path: str, value_col: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    df["year"] = pd.to_numeric(df["year"], errors="coerce")
+    df[value_col] = pd.to_numeric(df[value_col], errors="coerce")
+    df["division"] = df["division"].astype(str)
+
+    df = df.dropna(subset=["year", "division", value_col]).copy()
+    df["year"] = df["year"].astype(int)
+
+    # chop off 2025 and keep only 2010+
+    df = df[(df["year"] >= 2010) & (df["year"] <= 2024)].copy()
+
+    return df[["division", "year", value_col]]
+
+
 def merge_acs_into_panel(base_path: str, acs_zip_path: str, output_path: str) -> pd.DataFrame:
-    """Merge ACS features into main monthly panel and create model-ready dataset."""
+    """Merge ACS features + 3 annual CSV features into main monthly panel."""
     base = pd.read_csv(base_path)
 
     # Parse dates and create year
     base["date"] = pd.to_datetime(base["date"])
     base["year"] = base["date"].dt.year
 
+    # Optional but recommended: remove duplicate division-date rows
+    base = (
+        base.groupby(["division", "date", "year"], as_index=False)
+        .agg(
+            zhvi=("zhvi", "mean"),
+            hpi=("hpi", "mean"),
+            unemployment_rate=("unemployment_rate", "mean"),
+        )
+        .sort_values(["division", "date"])
+        .reset_index(drop=True)
+    )
+
     # Build ACS division-year features
     acs = build_acs_features_from_zip(acs_zip_path)
 
+    # Load your 3 generated CSVs
+    households = load_feature_csv(TOTAL_HOUSEHOLDS_PATH, "total_households")
+    permits = load_feature_csv(CONSTRUCTION_PERMITS_PATH, "construction_permits")
+    vacancy = load_feature_csv(RENTAL_VACANCY_PATH, "rental_vacancy_rate")
+
+    # Keep only post-2010 and chop off 2025
+    base = base[(base["year"] >= 2010) & (base["year"] <= 2024)].copy()
+    acs = acs[(acs["year"] >= 2010) & (acs["year"] <= 2024)].copy()
+
     # Merge onto monthly panel
-    merged = base.merge(acs, on=["division", "year"], how="left")
+    merged = (
+        base.merge(acs, on=["division", "year"], how="left")
+            .merge(households, on=["division", "year"], how="left")
+            .merge(permits, on=["division", "year"], how="left")
+            .merge(vacancy, on=["division", "year"], how="left")
+    )
 
-    # Keep only post-2010 period because ACS starts in 2010
-    merged = merged[merged["year"] >= 2010].copy()
+    # Forward-fill annual variables within each division
+    annual_cols = [
+        "total_population",
+        "median_income",
+        "bachelors_pct",
+        "total_households",
+        "construction_permits",
+        "rental_vacancy_rate",
+    ]
 
-    # Forward-fill ACS variables within each division
-    acs_cols = ["total_population", "median_income", "bachelors_pct"]
     merged = merged.sort_values(["division", "date"]).copy()
-    merged[acs_cols] = (
-        merged.groupby("division")[acs_cols]
+    merged[annual_cols] = (
+        merged.groupby("division")[annual_cols]
               .ffill()
     )
 
-    merged = merged.dropna(subset=acs_cols).copy()
+    merged = merged.dropna(subset=annual_cols).copy()
 
     merged = merged.drop(columns=["year"])
 
