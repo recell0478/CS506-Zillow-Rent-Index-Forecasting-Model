@@ -5,6 +5,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
 
 
+
 def load_data(file_path="data/processed/df_clean.csv"):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Could not find file at: {file_path}")
@@ -15,13 +16,20 @@ def load_data(file_path="data/processed/df_clean.csv"):
     missing = expected_cols - set(df.columns)
     if missing:
         raise ValueError(f"Missing expected columns: {missing}")
+    
 
     return df
 
 
 def preprocess_data(df):
     df = df.copy()
+
+    # Drop duplicate
+    df = df.drop_duplicates(subset=['division', 'date']).reset_index(drop=True)
+
+    # Date and Sort
     df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values(["division", "date"]).reset_index(drop=True)
     
     # List of all new numerical features
     numeric_features = [
@@ -30,13 +38,19 @@ def preprocess_data(df):
     ]
     
     # Handle Lags 
-    df = df.sort_values(["division", "date"])
     df["zhvi_lag1"] = df.groupby("division")["zhvi"].shift(1)
     
-    # Drop rows with NaN from lags
-    df = df.dropna().reset_index(drop=True)
+    # Drop any rows where numeric features or lags are missing
+    df = df.dropna(subset=numeric_features + ["zhvi_lag1", "zhvi"]).reset_index(drop=True)
     
+    # Time and Month Index
+    min_date = df["date"].min()
+    df["time_index"] = (
+        (df["date"].dt.year - min_date.year) * 12
+        + (df["date"].dt.month - min_date.month)
+    )
     df["month"] = df["date"].dt.month.astype(str)
+
     df_model = pd.get_dummies(df, columns=["division", "month"], drop_first=True)
     
     return df, df_model
@@ -96,6 +110,7 @@ def evaluate_model(model, X_test, y_test):
     return y_pred, metrics
 
 
+"""
 def save_outputs(test_df, y_test, y_pred, feature_cols, model):
     os.makedirs("outputs", exist_ok=True)
 
@@ -112,11 +127,48 @@ def save_outputs(test_df, y_test, y_pred, feature_cols, model):
     coef_df.to_csv("outputs/model_coefficients.csv", index=False)
 
     return coef_df
+"""
 
+def save_outputs(test_df_raw, y_test, y_pred, feature_cols, model):
+    os.makedirs("outputs", exist_ok=True)
+
+    # Create a results df using the unscaled test data
+    results = test_df_raw.copy()
+    results["actual_zhvi"] = y_test.values
+    results["predicted_zhvi"] = y_pred
+
+    # Get the division name
+    division_cols = [c for c in results.columns if c.startswith('division_')]
+    
+    def get_division(row):
+        for col in division_cols:
+            if row[col] == 1:
+                return col.replace('division_', '')
+        return 'East_North_Central' 
+    
+    results['division_name'] = results.apply(get_division, axis=1)
+
+    # Filter the columns 
+    final_output = results[['date', 'division_name', 'actual_zhvi', 'predicted_zhvi']]
+    
+    # Sort
+    final_output = final_output.sort_values(['date', 'division_name'])
+    final_output.to_csv("outputs/predictions.csv", index=False)
+
+    # Save Coefficients
+    coef_df = pd.DataFrame({
+        "feature": feature_cols,
+        "coefficient": model.coef_
+    }).sort_values("coefficient", key=abs, ascending=False)
+    coef_df.to_csv("outputs/model_coefficients.csv", index=False)
+
+    return coef_df
+
+BASE_DATA_PATH = "data/processed/df_clean_with_all_features_model_ready_2010_2024.csv"
 
 def main():
     print("Loading cleaned dataset...")
-    df = load_data()
+    df = load_data(BASE_DATA_PATH)
 
     print("Preprocessing data...")
     df_raw, df_model = preprocess_data(df)
@@ -125,12 +177,12 @@ def main():
     print(f"Model-ready shape: {df_model.shape}")
 
     print("Creating time-based train/test split...")
+    # Splits into training (pre-2022) and testing (post-2022)
     train_df, test_df, split_date = time_train_test_split(df_raw, df_model, split_ratio=0.8)
     print(f"Train/Test split date: {pd.to_datetime(split_date).date()}")
-    print(f"Train shape: {train_df.shape}")
-    print(f"Test shape: {test_df.shape}")
 
     print("Building features...")
+    # Handles scaling and returns the final feature list
     X_train, X_test, y_train, y_test, feature_cols = build_features(train_df, test_df)
 
     print("Training multiple linear regression model...")
@@ -150,10 +202,7 @@ def main():
     print(coef_df.head(15).to_string(index=False))
 
     print("\nDone.")
-    print("Saved files:")
-    print("- outputs/predictions.csv")
-    print("- outputs/model_coefficients.csv")
-
+    print("Saved files: outputs/predictions.csv, outputs/model_coefficients.csv")
 
 if __name__ == "__main__":
     main()
