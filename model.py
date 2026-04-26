@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.preprocessing import StandardScaler
 
 
 def load_data(file_path="data/processed/df_clean.csv"):
@@ -20,41 +21,24 @@ def load_data(file_path="data/processed/df_clean.csv"):
 
 def preprocess_data(df):
     df = df.copy()
-
     df["date"] = pd.to_datetime(df["date"])
-
-    df = df.sort_values(["division", "date"]).reset_index(drop=True)
-
-    df = (
-        df.groupby(["division", "date"], as_index=False)
-        .agg({
-            "zhvi": "mean",
-            "hpi": "mean",
-            "unemployment_rate": "mean"
-        })
-    )
-
-    df = df.sort_values(["division", "date"]).reset_index(drop=True)
-    df["unemployment_rate"] = (
-        df.groupby("division")["unemployment_rate"]
-        .transform(lambda s: s.ffill().bfill())
-    )
-
+    
+    # List of all new numerical features
+    numeric_features = [
+        "hpi", "unemployment_rate", "total_population", "median_income", 
+        "bachelors_pct", "total_households", "construction_permits", "rental_vacancy_rate"
+    ]
+    
+    # Handle Lags 
+    df = df.sort_values(["division", "date"])
     df["zhvi_lag1"] = df.groupby("division")["zhvi"].shift(1)
-    df["zhvi_lag2"] = df.groupby("division")["zhvi"].shift(2)
-
-    min_date = df["date"].min()
-    df["time_index"] = (
-        (df["date"].dt.year - min_date.year) * 12
-        + (df["date"].dt.month - min_date.month)
-    )
-
+    
+    # Drop rows with NaN from lags
+    df = df.dropna().reset_index(drop=True)
+    
     df["month"] = df["date"].dt.month.astype(str)
-
-    df = df.dropna(subset=["zhvi_lag1", "zhvi_lag2", "hpi", "unemployment_rate", "zhvi"])
-
     df_model = pd.get_dummies(df, columns=["division", "month"], drop_first=True)
-
+    
     return df, df_model
 
 
@@ -74,17 +58,20 @@ def time_train_test_split(df_raw, df_model, split_ratio=0.8):
 
 def build_features(train_df, test_df):
     target = "zhvi"
-
     drop_cols = ["zhvi", "date"]
     feature_cols = [col for col in train_df.columns if col not in drop_cols]
 
     X_train = train_df[feature_cols]
     y_train = train_df[target]
-
     X_test = test_df[feature_cols]
     y_test = test_df[target]
 
-    return X_train, X_test, y_train, y_test, feature_cols
+    # Scale the data
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    return X_train_scaled, X_test_scaled, y_train, y_test, feature_cols
 
 
 def train_model(X_train, y_train):
