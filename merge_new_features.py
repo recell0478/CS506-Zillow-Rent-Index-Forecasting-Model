@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import zipfile
 import re
+from typing import Optional
 
 
 BASE_DATA_PATH = "data/processed/df_clean.csv"
@@ -56,7 +57,7 @@ def to_numeric(series: pd.Series) -> pd.Series:
     """Convert ACS columns to numeric safely."""
     return pd.to_numeric(series, errors="coerce")
 
-def extract_state_abbr(name: str) -> str | None:
+def extract_state_abbr(name: str) -> Optional[str]:
     """
     ACS NAME usually looks like:
     'Jefferson County, Alabama'
