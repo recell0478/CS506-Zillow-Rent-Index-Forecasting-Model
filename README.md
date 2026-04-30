@@ -14,7 +14,7 @@ The highest correlation came from the median income feature as the feature corre
 
 <img width="659" height="567" alt="download" src="https://github.com/user-attachments/assets/3a5ca4bc-ab33-41ed-804e-f404e55c44f4" />
 
-We can also distinguish the ZHVI trend by division to provide even more accurate results.
+We can also distinguish the ZHVI trend by division to provide even more accurate results. More data visualization is available under 'data_visualization.ipynb'.
 <img width="597" height="455" alt="download" src="https://github.com/user-attachments/assets/31722ed5-af79-4f6d-9496-2466941fc2a3" />
 
 **Test plan**: Use time-based split and report MAE/RMSE
