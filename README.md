@@ -84,7 +84,14 @@ The workflow:
 3. Run `make test` before pushing.
 4. Update the README if setup, usage, or outputs change.
 
+## Modeling
 
+For our modeling, we chose three distinct approaches.
+First, we established Linear Regression as our baseline. Its primary role was Interpretability. In the housing world, stakeholders want to know the direct 'dollar-for-dollar' impact. This model allowed us to quantify exactly how a thousand-dollar increase in local income translates into a specific rise in home value.
+
+However, housing data is notorious for multicollinearity. For example, 'Total Population' and 'Total Households' often move similarly, which can cause a standard Linear model to overfit or give wild, unstable weights to those features. To solve this, we used Ridge Regression with an Alpha of 1.0. By applying an L2 Penalty, we shrank those noisy coefficients, forcing the model to be more stable and reliable .
+
+Finally, we utilized Random Forest with 100 estimators. We chose this because the housing market isn't always a straight line, it's full of complex, non-linear interactions. A linear model assumes an income boost always has the same effect, but a Random Forest can realize that an income boost matters more when the vacancy rate is extremely low. 
 ## Results
 
 The primary goal of this project was to determine if regional home values (ZHVI) could be accurately predicted using economic indicators—such as Median Income, Unemployment, and Rental Vacancy.  
