@@ -84,5 +84,44 @@ The workflow:
 3. Run `make test` before pushing.
 4. Update the README if setup, usage, or outputs change.
 
+
+## Results
+
+The primary goal of this project was to determine if regional home values (ZHVI) could be accurately predicted using economic indicators—such as Median Income, Unemployment, and Rental Vacancy.  
+
+The project was successful as our best model explained 91.5% of the variance in home prices across different U.S. regions, proving that economic fundamentals are a powerful and reliable anchor for market value.
+
+<img src="img/linear_reg.png" alt="Linear Regression Coefficients" width="500">
+
+Looking at the coefficient graph for the Linear Regression Model.  The model is heavily anchored by Median Income. This makes sense as where people make more money, they bid up house prices. However, looking at the confliction between Total Population and Total Households we can see the model deals with collinearity because these two features are so similar, the linear model is essentially 'fighting' with itself to find the perfect fit. It’s effective for prediction, but it shows the model is a bit unstable when features overlap.
+
+
+<img src="img/ridge_reg.png" alt="Ridge Regression Coefficients" width="500">
+
+Next, looking at the Ridge coefficients. By applying that L2 penalty, we forced the model to stop over-relying on the population overlap. Instead, it identifies Median Income and the Home Price Index as the true, stable pillars. This makes a lot of logical sense as  house prices are a mix of what people earn locally and how the national market is trending.
+
+
+<img src="img/random_forest.png" alt="Random Forest Coefficients" width="500">
+
+On the other hand, The Random Forest chart tells a completely different story. While the linear models focused on wealth, the Forest focuses on scarcity. Nearly 50% of the model's logic is driven by the Rental Vacancy Rate. It discovered that if there are no empty homes, prices will skyrocket regardless of how much people earn. Also notice the Mountain Division is much more impactful here. The Forest picked up on the recent migration 'hot spot' in those states, a trend that doesn't follow a straight line and would have been missed by the other model.
+
+The comparison of our three models demonstrated that in a trending market, linear relationships are the most effective predictors.
+
+| Model  | MAE| RMSE |  $R^2$ |
+| ------------- | ------------- | ------------- | ------------- |
+| Linear Regression   | $31,074.18  | $34,573.93 | 0.9150 |
+| Ridge Regression  | $34,221.88  | $37,664.90 | 0.8991 |
+| Random Forest  | $47,502.02  | $79,879.95 | 0.5460 |
+
+ Our best model was Linear Regression. It achieved an $R^2$ score of 0.915, meaning it explained over 91% of the variation in home prices. With a Mean Absolute Error of about $31,000, it proved remarkably accurate at predicting regional values based purely on economic fundamentals.
+
+Ridge Regression followed closely behind with an $R^2$ of 0.899. While its error was slightly higher than the standard linear model, it gave us much more stable coefficients, which makes it a more reliable tool for long-term economic forecasting where variables often overlap.
+
+Surprisingly,  Random Forest had the weakest performance by a significant margin, with an $R^2$ of only 0.546 and double the error of our linear models.
+This is due to the fact that we trained the model on data up to 2021 and tested it on the record-breaking price spikes of 2022 to 2024. As a tree-based model, it struggled to predict values higher than anything it had seen in its training set.
+
+Ultimately, these results tell us that the U.S. housing market is currently driven by a strong, linear upward trend with factors like income and hpi.
+
+
 ## Youtube Video Presentation
-https://youtu.be/-y_m_SK9O40
+https://youtu.be/-y_m_SK9O40 
